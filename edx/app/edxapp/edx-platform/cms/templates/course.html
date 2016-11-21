@@ -1,0 +1,35 @@
+<!Doctype HTML>
+<html>
+<head>
+		{% load static from staticfiles %}
+		
+		<link rel="stylesheet" href="{% static "css/jquery-jvectormap-2.0.3.css" %}" type="text/css" media="screen"/>
+		<script src="{% static "js/jquery-3.1.1.min.js" %}"></script>				
+		<script src="{% static "js/jquery-jvectormap-2.0.3.min.js" %}"></script>	
+		<script src="{% static "js/jquery-jvectormap-world-mill.js" %}"></script>
+		
+
+</head>
+<body>
+        <div id="world-map" style="width: 1000px; height: 700px"></div>
+	<script>
+		var gdpData = {{ report | safe }};
+		$(function(){
+		  $('#world-map').vectorMap({
+			  map: 'world_mill',
+			  series: {
+				regions: [{
+				  values: gdpData,
+				  scale: ['#C8EEFF', '#0071A4'],
+				  normalizeFunction: 'polynomial'
+				}]
+			  },
+			  onRegionTipShow: function(e, el, code){
+				el.html(el.html()+' (Enrollment - '+gdpData[code]+')');
+			  }
+});
+		});
+		</script>
+</body>
+
+</html>

@@ -1,31 +1,15 @@
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, Http404
 from .library import LIBRARIES_ENABLED
-import json
-from xmodule.contentstore.content import StaticContent
-from xmodule.course_module import CourseFields
-from xmodule.course_module import DEFAULT_START_DATE
-from xmodule.error_module import ErrorDescriptor
-from xmodule.modulestore import EdxJSONEncoder
 from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
 from student.auth import has_course_author_access, has_studio_write_access, has_studio_read_access
 from course_action_state.models import CourseRerunState, CourseRerunUIStateManager
 from django.shortcuts import render_to_response
-
 from student.roles import CourseInstructorRole, CourseStaffRole, LibraryUserRole
-from xmodule.course_module import CourseSummary
-
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from opaque_keys import InvalidKeyError
-from opaque_keys.edx.locator import AssetLocator, BlockUsageLocator, CourseLocator, Locator
-from util.json_request import JsonResponse, expect_json
-
 from django.contrib.auth.models import User
-from courseware.courses import get_course_by_id, get_studio_url
 from student.models import CourseEnrollment
-
 from django.contrib.auth import authenticate
-
 from django.core.mail import EmailMessage
 from django.contrib.auth.views import login
 
@@ -39,10 +23,9 @@ def index(request):
 	if LIBRARIES_ENABLED:
 		courses, in_process_course_actions = get_courses_accessible_to_user(request)
 		if len(courses) > 0:
-			response = "<div>"
+			response = "<div><font color='blue'>"
 			responsedisplay =''
 			for course_info in courses:
-				
 				try:    	
     					course_key = CourseKey.from_string(str(course_info.id))
 				except InvalidKeyError:
@@ -55,37 +38,43 @@ def index(request):
 				formatted_users = []
 
     				for user in instructors:
-  					response  += "<div><h3>Dear "+str(user.first_name) +",</h3><h3>Since Launch</h3></div>"
+  					response  += "<div>Dear "+str(user.first_name) +",<br/>Since Launch</div>"
 					response  += "<br /> Course name	:"+ str(course_info.display_name)				
 					courseEnv =  CourseEnrollment.objects.enrollment_counts(course_key)
-					response  += "<div>"+ str(courseEnv['total']) +" people have enrolled in your course <br /> --- of them Completed it"+"</div>"	
-					response += user.email		
+					response  += "<div><font color='red'><font size='4'><b>"+ str(courseEnv['total']) +"</b></font></font> people have enrolled in your course, <br /> --- of them Completed it"+"</div>"	
+					response += "<div>" +"Student map location for your course :<b>"+  """<a href=" http://35.162.171.46:18010/coursereport/""" + str(course_key) + """ "> """ + str(course_info.display_name) + "</a></b> <br/>" +"</div>"
 					response  +="</div>"
 					
 					email = EmailMessage('Course List', response, to= [user.email])
 					email.content_subtype = 'html'
-					email.send()	
+					email.send()
+					responsedisplay += response
+					response = ''
+				for user in staff - instructors:
+  					response  += "<div>Dear "+str(user.first_name) +", <br/>Since Launch</div>"
+					response  += "<br /> Course name	:"+ str(course_info.display_name)
+					courseEnv =  CourseEnrollment.objects.enrollment_counts(course_key)
+					response  += "<div><font color='red'><font size='4'><b>"+ str(courseEnv['total']) +"</b></font></font> people have enrolled in your course, <br /> --- of them Completed it"+"</div>"	
+					response += "<div>" +"Student map location for your course :<b>"+  """<a href=" http://35.162.171.46:18010/coursereport/""" + str(course_key) + """ "> """ + str(course_info.display_name) + "</a> </b> <br/>" +"</div>"					
+
+					response  +="</div><br /><br />"
+					email = EmailMessage('Course Report', response, to= [user.email])					
+					email.content_subtype = 'html'
+					email.send()
 					responsedisplay += response							
 					response = ''
+
 			return HttpResponse(responsedisplay)
-			
 		else:
 			return HttpResponse("No course found")
-
 	else:
    		return HttpResponse("Library not enabled")
 
-def _accessible_libraries_list(user):
-    """
-    List all libraries available to the logged in user by iterating through all libraries
-    """
-    # No need to worry about ErrorDescriptors - split's get_libraries() never returns them.
-    return [lib for lib in modulestore().get_libraries() if has_studio_read_access(user, lib.location.library_key)]
 
-def get_courses_accessible_to_user(request):       
+
+def get_courses_accessible_to_user(request):
     courses, in_process_course_actions = _accessible_courses_summary_list(request)
     return courses, in_process_course_actions
-
 
 def _accessible_courses_summary_list(request):	
     courses_summary = filter(course_filter, modulestore().get_course_summaries())
@@ -131,5 +120,3 @@ def user_with_role(user, role):
         'email': user.email,
         'role': role
     }
-
-

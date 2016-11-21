@@ -82,7 +82,11 @@ urlpatterns += patterns(
         'course_info_update_handler'
     ),
     url(r'^home/?$', 'course_listing', name='home'),
-    url(r'^appliedxcourse/?$', 'appliedxcourse.index', name='index'),	
+    url(r'^appliedxcourse/?$', 'appliedxcourse.index', name='index'),
+    url(r'^courselist/?$', 'courselist.index', name='index'),
+    url(r'^coursereport/{}$'.format(settings.COURSE_KEY_PATTERN), 'coursereport.index', name='index'),
+
+
     url(
         r'^course/{}/search_reindex?$'.format(settings.COURSE_KEY_PATTERN),
         'course_search_index_handler',
@@ -200,6 +204,7 @@ if 'debug_toolbar' in settings.INSTALLED_APPS:
     )
 
 # Custom error pages
+# These are used by Django to render these error codes. Do not remove.
 # pylint: disable=invalid-name
 handler404 = 'contentstore.views.render_404'
 handler500 = 'contentstore.views.render_500'
